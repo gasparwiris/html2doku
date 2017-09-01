@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import lxml.html
 
 inline_elements = {
@@ -9,7 +11,8 @@ inline_elements = {
         'sub': ('<sub>','</sub>'),
         'sup': ('<sup>','</sup>'),
         'kbd': ('<key>','</key>'),
-        'del': ('<del>','</del>')
+        'del': ('<del>','</del>'),
+        'code': ('\'\'','\'\'')
         }
 block_elements = {
         'p': ('',''),
@@ -25,7 +28,6 @@ void_elements = {
         }
 special_elements = {
         'a',
-        'code',
         'pre',
         'img',
         'ol',
@@ -37,7 +39,7 @@ special_elements = {
 class mutable_string:
     def __init__(self,**args):
         for (key, value) in args.items():
-            setattr(self, key, value)
+            setattr(self, key, value) #apparently this doesn't use unicode
 
 def get_style(element,parent_style):
     tag = element.tag
@@ -147,12 +149,11 @@ def process_element(element,main_text,parent_style):
     return
 
 doc = lxml.html.parse('test.html')
-result  = mutable_string(s='')
+result  = mutable_string(s=u'')
 process_element(doc.getroot(),result,'block')
-#out = open('test.txt','w')
-#out.write(main_text)
-#out.close()
-print(result.s)
+out = open('test.txt','w')
+out.write(result.s.encode('utf-8'))
+out.close()
 
 
 
