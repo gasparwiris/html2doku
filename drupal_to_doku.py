@@ -130,23 +130,13 @@ def process_block(element,main_text):
     main_text.s += block_elements[element.tag][1] + tail_text + '\n\n'
     return
 
-def process_element(element,main_text,parent_style):
-#    strip_tags(element,'div','center')
-    style = get_style(element,parent_style)
-    print('processing %s tag, type %s' % (element.tag, style))
+def process_element(element,main_text):
+    current = Html_pre(element)
+    main_text.s += current.print_head()
     for child in list(element):
-        print('has child %s' % child.tag)
-    if style == 'inline':
-        process_inline(element,main_text)
-    elif style == 'block':
-        process_block(element,main_text)
-    elif style == 'void':
-        process_void(element,main_text)
-    elif style == 'special':
-        process_special(element,main_text)
-    else:
-        process_invalid(element,main_text)
-    return
+        process_element(child,main_text)
+    main_text.s += current.print_tail()
+
 
 doc = lxml.html.parse('test.html')
 result  = mutable_string(s=u'')
