@@ -18,6 +18,16 @@ def process_element(element,main_text):
 
 parser = lxml.etree.HTMLParser(remove_comments=True)
 doc = lxml.etree.parse('test.html',parser)
+lxml.etree.strip_tags(doc.getroot(),
+                 'html',
+                 'head',
+                 'body',
+                 'meta',
+                 'link',
+                 'script',
+                 'style',
+                 'div',
+                 'center')
 result  = mutable_string(s=u'')
 process_element(doc.getroot(),result)
 out = open('test.txt','w')

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import io
+
 def _empty_if_none(text):
     if text == None:
         return ''
@@ -20,6 +22,7 @@ _styles = {
             'code': ('\'\'','\'\'')
             },
         'block': {
+            'html': ('',''),
             'p': ('',''),
             'h1': ('====== ',' ======'),
             'h2': ('===== ',' ====='),
@@ -29,12 +32,12 @@ _styles = {
             },
         'void': {
             'br':('\n\n',''),
-            'hr':('\n----\n','')
+            'hr':('----\n\n','')
             },
         'special': {
             'a',
-            #'pre',
-            #'img',
+            'pre',
+            'img',
             #'ol',
             #'ul',
             #'li',
@@ -46,8 +49,10 @@ class Html_pre:
     def __print_special_head(self):
         if self.element.tag == 'a':
             return self.__print_anchor_h()
-            #'pre': self.__print_pre_h,
-            #'img': self.__print_img_h,
+        elif self.element.tag == 'img':
+            return self.__print_img_h()
+        elif self.element.tag == 'pre':
+            return self.__print_pre_h()
             #'ol': self.__print_ol_h,
             #'ul': self.__print_ul_h,
             #'li': self.__print_li_h,
@@ -56,8 +61,10 @@ class Html_pre:
     def __print_special_tail(self):
         if self.element.tag == 'a':
             return self.__print_anchor_t()
-            #'pre': self.__print_pre_t,
-            #'img': self.__print_img_t,
+        elif self.element.tag == 'img':
+            return self.__print_img_t()
+        elif self.element.tag == 'pre':
+            return self.__print_pre_t()
             #'ol': self.__print_ol_t,
             #'ul': self.__print_ul_t,
             #'li': self.__print_li_t,
@@ -69,14 +76,41 @@ class Html_pre:
             self.style = 'invalid'
             return self.print_head()
         return ('[[' + _empty_if_none(self.element.attrib['href'])
-                +'|') 
+                +'|'
+                + _empty_if_none(self.element.text))
 
     def __print_anchor_t(self):
         if 'href' not in self.element.attrib:
             self.style = 'invalid'
             return self.print_tail()
-        return ']]'
-        
+        return ']]' + _empty_if_none(self.element.tail)
+
+    def __print_img_h(self):
+        if 'src' not in self.element.attrib:
+            self.style = 'invalid'
+            return self.print_head()
+        return ('{{' + _empty_if_none(self.element.attrib['src']
+                +'|')
+                + _empty_if_none(self.element.text))
+
+    def __print_img_t(self):
+        if 'src' not in self.element.attrib:
+            self.style = 'invalid'
+            return self.print_tail()
+        return '}}' + _empty_if_none(self.element.tail)
+
+    def __print_pre_h(self):
+        text = unicode(_empty_if_none(self.element.text))
+        in_buffer = io.StringIO(text)
+        out_buffer = io.StringIO()
+        current = in_buffer.readline()
+        while len(current):
+            out_buffer.write(u'    ' + unicode(current))
+            current = in_buffer.readline()
+        return out_buffer.getvalue()
+
+    def __print_pre_t(self):
+        return '\n' + self.element.tail
 
     def __get_style(self):
         for _style in _styles:
@@ -90,8 +124,7 @@ class Html_pre:
             return '<%s>%s' % (self.element.tag,
                                _empty_if_none(self.element.text))
         if self.style == 'special':
-            return (self.__print_special_head()
-                    + _empty_if_none(self.element.text))
+            return self.__print_special_head()
         return (_styles[self.style][self.element.tag][0]
                 + _empty_if_none(self.element.text))
     
@@ -100,8 +133,7 @@ class Html_pre:
             return '</%s>%s' % (self.element.tag,
                                 _empty_if_none(self.element.tail))
         if self.style == 'special':
-            return (self.__print_special_tail()
-                    + _empty_if_none(self.element.tail))
+            return self.__print_special_tail()
         return (_styles[self.style][self.element.tag][1]
                 + _empty_if_none(self.element.tail))
 
