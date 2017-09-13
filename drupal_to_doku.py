@@ -1,37 +1,34 @@
 # -*- coding: utf-8 -*-
 
 import lxml.etree
+import io
 from html_to_doku import Html_pre
 
-class mutable_string:
-    def __init__(self,**args):
-        for (key, value) in args.items():
-            setattr(self, key, value) #apparently this doesn't use unicode
+def process_element(htmlnode,main_text):
+    current = htmlnode
+    main_text.write(current.print_head())
+    currentinfo = current.getinfo()
+    for child in list(current.element):
+        next = Html_pre(child,currentinfo)
+        process_element(next,main_text)
+    main_text.write(current.print_tail())
 
-def process_element(element,main_text):
-    current = Html_pre(element)
-    main_text.s += current.print_head()
-    for child in list(element):
-        process_element(child,main_text)
-    main_text.s += current.print_tail()
-
+def remove_tags(document,*tags):
+    for tag in tags:
+        for element in document.findall('.//'+tag):
+            document.remove(element)
 
 parser = lxml.etree.HTMLParser(remove_comments=True)
-doc = lxml.etree.parse('test.html',parser)
-lxml.etree.strip_tags(doc.getroot(),
-                 'html',
-                 'head',
-                 'body',
-                 'meta',
-                 'link',
-                 'script',
-                 'style',
-                 'div',
-                 'center')
-result  = mutable_string(s=u'')
-process_element(doc.getroot(),result)
-out = open('test.txt','w')
-out.write(result.s.encode('utf-8'))
+doc = lxml.etree.parse('test.html',parser).getroot()
+remove_tags(doc,'head','link','meta','style','script')
+root = Html_pre(doc)
+lxml.etree.strip_tags(root.element,'body')
+
+
+result = io.StringIO(u'')
+process_element(root,result)
+out = open('test.txt','wb+')
+out.write(result.getvalue().encode('utf-8'))
 out.close()
 
 
