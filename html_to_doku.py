@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import io
+import lxml.etree
 
 def _empty_if_none(text):
     if text == None or text.isspace():
@@ -21,7 +22,8 @@ _styles = {
             'kbd': ('<key>','</key>'),
             'del': ('<del>','</del>'),
             'code': ('\'\'','\'\''),
-            'pre': ('<code>','</code>')
+            'pre': ('<code>','</code>'),
+            'tr': ('','|\n')
             },
         'block': {
             'html': ('',''),
@@ -35,8 +37,8 @@ _styles = {
             'h5': ('= ',' =\n\n'),
             },
         'void': {
-            'br':('','\n\n'),
-            'hr':('----','\n\n')
+            'br':('','\\\\ '),
+            'hr':('','----\n\n')
             },
         'special': {
             'a',
@@ -44,9 +46,10 @@ _styles = {
             'ol',
             'ul',
             'li',
-            #'table',
-            #'th',
-            #'td'
+            'table',
+            'tr',
+            'th',
+            'td'
             }
         }
 
@@ -67,7 +70,10 @@ class Html_pre:
             return self.__print_list_h()
         elif self.element.tag == 'li':
             return self.__print_li_h()
-            #'table': self.__print_table_h
+        elif self.element.tag == 'table':
+            return self.__print_table_h()
+        elif self.element.tag in ['td','th']:
+            return self.__print_cell_h()
 
     def __print_special_tail(self):
         if self.element.tag == 'a':
@@ -75,10 +81,13 @@ class Html_pre:
         elif self.element.tag == 'img':
             return self.__print_img_t()
         elif self.element.tag in ['ul','ol']:
-            return self.__print_list_h()
+            return self.__print_list_t()
         elif self.element.tag == 'li':
-            return self.__print_li_h()
-            #'table': self.__print_table_t
+            return self.__print_li_t()
+        elif self.element.tag == 'table':
+            return self.__print_table_t()
+        elif self.element.tag in ['td','th']:
+            return self.__print_cell_t()
 
     #TODO: handle a tags that are only anchors
     def __print_anchor_h(self):
@@ -111,18 +120,48 @@ class Html_pre:
 
     def __print_list_h(self):
         self.listtype = self.element.tag
-        return ''
+        self.nestlevel += 1
+        return '' + _empty_if_none(self.element.text)
     
     def __print_list_t(self):
-        if self.nestlvl == 1:
-            return '\n\n'
+        if self.nestlevel == 1:
+            retval =  '\n\n'
         else:
-            return ''
+            retval =  ''
+        return retval + _empty_if_none(self.element.tail)
+
     def __print_li_h(self):
-        return (' ' * 2 * self.nestlevel) + '*'
+        print('element %s, nestlevel %s' %(self.element.tag,self.nestlevel))
+        return (('  ' * self.nestlevel) + '*'
+                + _empty_if_none(self.element.text))
+        #return _empty_if_none(self.element.text)
 
     def __print_li_t(self):
-        return '\n'
+        return '\n' + _empty_if_none(self.element.tail)
+
+    def __print_table_h(self):
+        for tag in ['thead','tbody','tfoot']:
+            table_element = self.element.find(tag)
+            if table_element != None:
+                self.element.remove(table_element)
+                self.element.append(table_element)
+        lxml.etree.strip_tags(self.element,'thead','tbody','tfoot')
+        return '' + _empty_if_none(self.element.text)
+
+    def __print_table_t(self):
+        return _empty_if_none(self.element.tail) + '\n\n'
+
+    def __print_cell_h(self):
+        if self.element.tag == 'th':
+            return '^ ' + _empty_if_none(self.element.text)
+        elif self.element.tag == 'td': 
+            return '| ' + _empty_if_none(self.element.text)
+
+    def __print_cell_t(self):
+        if self.element.tag == 'th':
+            return  _empty_if_none(self.element.tail) + ' '
+        elif self.element.tag == 'td': 
+            return  _empty_if_none(self.element.tail) + ' '
 
     def __get_style(self):
         for _style in _styles:
@@ -165,9 +204,8 @@ class Html_pre:
         return unicode(retval)
 
     def __init__(self,init_element,parentinfo=_default_parent):
-        print(init_element.tag)
-        print(parentinfo)
         self.element = init_element
-        self.nestlevel = parentinfo['nestlevel'] + 1
+        self.nestlevel = parentinfo['nestlevel']
         self.listtype = parentinfo['listtype']
         self.__get_style()
+

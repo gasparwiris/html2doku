@@ -2,6 +2,7 @@
 
 import lxml.etree
 import io
+import sys
 from html_to_doku import Html_pre
 
 def process_element(htmlnode,main_text):
@@ -19,17 +20,22 @@ def remove_tags(document,*tags):
             document.remove(element)
 
 parser = lxml.etree.HTMLParser(remove_comments=True)
-doc = lxml.etree.parse('test.html',parser).getroot()
+
+#temporary, for testing
+
+if len(sys.argv):
+    test = sys.argv[1]
+else:
+    test = 'test.html'
+
+doc = lxml.etree.parse(test,parser).getroot()
 remove_tags(doc,'head','link','meta','style','script')
 root = Html_pre(doc)
-lxml.etree.strip_tags(root.element,'body')
+lxml.etree.strip_tags(root.element,'body','center','blockquote')
 
 
 result = io.StringIO(u'')
 process_element(root,result)
-out = open('test.txt','wb+')
+out = open('/home/gaspar/host/test.txt','wb+')
 out.write(result.getvalue().encode('utf-8'))
 out.close()
-
-
-
