@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import lxml.etree
+import lxml.html
 import io
 import os
 import sys
 import configargparse
+from itertools import izip_longest
 from html_to_doku import Html_pre
 
 def process_element(htmlnode,main_text):
@@ -16,8 +17,31 @@ def process_element(htmlnode,main_text):
         process_element(next,main_text)
     main_text.write(current.print_tail())
 
+def strip_tags(document,tag):
+    if tag != None:
+        for element in document.findall('.//%s' % tag):
+            element.drop_tag()
 def strip_ids(document,idname):
-    pass
+    if idname != None:
+        for element in document.xpath('//*[@id="%s"]' % idname):
+            element.drop_tag()
+def strip_classes(document,classname):
+    if classname != None:
+        for element in document.xpath('//*[@class="%s"]' % classname):
+            element.drop_tag()
+
+def ignore_tags(document,tag):
+    if tag != None:
+        for element in document.findall('.//%s' % tag):
+            element.getparent().remove(element)
+def ignore_ids(document,idname):
+    if idname != None:
+        for element in document.xpath('//*[@id="%s"]' % idname):
+            element.getparent().remove(element)
+def ignore_classes(document,classname):
+    if classname != None:
+        for element in document.xpath('//*[@class="%s"]' % classname):
+            element.getparent().remove(element)
 
 exists_conf_file = False
 HOMEDIR = os.path.expanduser('~')
@@ -30,7 +54,15 @@ elif os.path.isfile(os.path.join(HOMEDIR,'.h2dok')):
     exists_conf_file = True
 
 argp = configargparse.ArgParser()
+argp.add('FILES',
+         nargs = '+',
+         help = ('List of relative or absolute paths to files or '
+                 'directories passed to html2doku. If a directory '
+                 'is given, html2doku will run on all \'.htm[l]\' '
+                 'files in the directory.'))
+
 if exists_conf_file:
+    print('yes')
     argp.add('-c',
              '--config',
              nargs = '?',
@@ -54,12 +86,14 @@ else:
 
 argp.add('--strip-tags',
          nargs = '+',
+         default = [],
          metavar = 'TAGS',
          help = ('List of tags to strip from input. '
                  'Child tags of stripped tags are still '
                  'processed.'))
 argp.add('--strip_ids',
          nargs = '+',
+         default = [],
          metavar = 'IDS',
          help = ('List of id attribute values. Tags with '
                  'the specified values will be stripped '
@@ -67,6 +101,7 @@ argp.add('--strip_ids',
                  'are still processed.'))
 argp.add('--strip_classes',
          nargs = '+',
+         default = [],
          metavar = 'CLASSES',
          help = ('List of class attribute values. Tags with '
                  'the specified values will be stripped '
@@ -74,12 +109,14 @@ argp.add('--strip_classes',
                  'are still processed.'))
 argp.add('--ignore-tags',
          nargs = '+',
+         default = [],
          metavar = 'TAGS',
          help = ('List of tags to ignore from input. '
                  'Child tags of ignored tags are also '
                  'ignored.'))
 argp.add('--ignore-ids',
          nargs = '+',
+         default = [],
          metavar = 'IDS',
          help = ('List of id attribute values. '
                  'Tags with the specified values '
@@ -87,31 +124,25 @@ argp.add('--ignore-ids',
                  'of ignored tags are also ignored.'))
 argp.add('--ignore-classes',
          nargs = '+',
+         default = [],
          metavar = 'CLASSES',
          help = ('List of class attribute values. '
                  'Tags with the specified values '
                  'will be ignored from input. Child tags '
                  'of ignored tags are also ignored.'))
-argp.add('FILES',
-         nargs = '+',
-         help = ('List of relative or absolute paths to files or '
-                 'directories passed to html2doku. If a directory '
-                 'is given, html2doku will run on all \'.htm[l]\' '
-                 'files in the directory.'))
 
 args = argp.parse_args()
 
-to_strip = []
-for triple in zip(args.strip-tags,
-                  args.strip-ids,
-                  args.strip-classes):
-    to_strip.append(triple)
+to_strip = list(izip_longest(args.strip_tags,
+                             args.strip_ids,
+                             args.strip_classes))
 
-to_ignore = []
-for triple in zip(args.ignore-tags,
-                  args.ignore-ids,
-                  args.ignore-classes):
-    to_ignore.append(triple)
+to_ignore = list(izip_longest(args.ignore_tags,
+                              args.ignore_ids,
+                              args.ignore_classes))
+
+print(args.strip_tags)
+print(to_strip)
 
 to_process = []
 for filepath in args.FILES:
@@ -132,23 +163,23 @@ for filepath in args.FILES:
                 print(f)
                 to_process.append(f)
 
-parser = lxml.etree.HTMLParser(remove_comments=True)
+parser = lxml.html.HTMLParser(remove_comments=True)
 outdir = os.path.join(CURRDIR,'h2dout')
 os.mkdir(outdir)
 for html_file in to_process:
-    doc = lxml.etree.parse(html_file,parser).getroot()
+    doc = lxml.html.parse(html_file,parser).getroot()
     for tag, idname, classname in to_strip:
-        lxml.etree.strip_tags(doc,tag)
+        strip_tags(doc,tag)
         strip_ids(doc,idname)
         strip_classes(doc,classname)
     for tag, idname, classname in to_ignore:
-        lxml.etree.ignore_tags(doc,tag)
+        ignore_tags(doc,tag)
         ignore_ids(doc,idname)
         ignore_classes(doc,classname)
 
-    remove_tags(doc,'head','link','meta','style','script')
+#    remove_tags(doc,'head','link','meta','style','script')
     root = Html_pre(doc)
-    lxml.etree.strip_tags(root.element,'body','center','blockquote')
+#    lxml.html.strip_tags(root.element,'body','center','blockquote')
     result = io.StringIO(u'')
     process_element(root,result)
 
