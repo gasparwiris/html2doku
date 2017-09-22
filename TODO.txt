@@ -1,0 +1,7 @@
+ - blockquotes
+ - treat inline divs
+ - tables probably don't support td in between th's
+ - do something with comment tags (ignored for now)
+ - add argument for starting at certain xpath
+ - resolve relative urls
+ - support downloading images
