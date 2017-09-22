@@ -131,7 +131,6 @@ class Html_pre:
         return retval + _empty_if_none(self.element.tail)
 
     def __print_li_h(self):
-        print('element %s, nestlevel %s' %(self.element.tag,self.nestlevel))
         return (('  ' * self.nestlevel) + '*'
                 + _empty_if_none(self.element.text))
         #return _empty_if_none(self.element.text)

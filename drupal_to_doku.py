@@ -27,7 +27,8 @@ def strip_ids(document,idname):
             element.drop_tag()
 def strip_classes(document,classname):
     if classname != None:
-        for element in document.xpath('//*[@class="%s"]' % classname):
+        for element in document.xpath('//*[contains(@class, "%s")]'
+                                      % classname):
             element.drop_tag()
 
 def ignore_tags(document,tag):
@@ -40,7 +41,8 @@ def ignore_ids(document,idname):
             element.getparent().remove(element)
 def ignore_classes(document,classname):
     if classname != None:
-        for element in document.xpath('//*[@class="%s"]' % classname):
+        for element in document.xpath('//*[contains(@class, "%s")]'
+                                      % classname):
             element.getparent().remove(element)
 
 exists_conf_file = False
@@ -54,18 +56,19 @@ elif os.path.isfile(os.path.join(HOMEDIR,'.h2dok')):
     exists_conf_file = True
 
 argp = configargparse.ArgParser()
-argp.add('FILES',
+argp.add('-i',
          nargs = '+',
+         required = True,
+         metavar = 'INPUT',
          help = ('List of relative or absolute paths to files or '
                  'directories passed to html2doku. If a directory '
                  'is given, html2doku will run on all \'.htm[l]\' '
-                 'files in the directory.'))
+                 'files in the directory.'),
+         dest = 'INPUT')
 
 if exists_conf_file:
-    print('yes')
     argp.add('-c',
              '--config',
-             nargs = '?',
              default = default_conf_file,
              type = str,
              metavar = 'Configuration file',
@@ -133,6 +136,7 @@ argp.add('--ignore-classes',
 
 args = argp.parse_args()
 
+
 to_strip = list(izip_longest(args.strip_tags,
                              args.strip_ids,
                              args.strip_classes))
@@ -141,11 +145,8 @@ to_ignore = list(izip_longest(args.ignore_tags,
                               args.ignore_ids,
                               args.ignore_classes))
 
-print(args.strip_tags)
-print(to_strip)
-
 to_process = []
-for filepath in args.FILES:
+for filepath in args.INPUT:
     exploredir = ''
     if os.path.isfile(filepath):
         to_process.append(filepath)
